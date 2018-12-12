@@ -1,30 +1,12 @@
 =Paperclip Autosizer
 
-Paperclip Autosizer is a simple system to save "WxH" information to the database.
-The system works entirely in concert with the Paperclip API and makes no additional calls
-to imagemagick. This allows the programmer to use a stock paperclip gem or plugin
-and take advantage of upgrades to the most current version. It also runs without
-significant changes to performance or memory footprint. Compatibility problems
-should therefore be low and I hope this will be a useful safe solution for forward
-looking projects.  These were at least my specific concerns with other well written
-but forked solutions and what drove me to write this.
+This code integrates with paperclip to save "WxH" image dimensions to the database.
 
-The system operates by sending the original image dimensions from a slight subclass of
-the standard thumbnail processor to the model. Final images sizes are obtained
-through pure calculation. It sounds strange to calculate and resize an image in
-IM and then calculate that again in the model, but it's actually the best solution
-I found to this problem.  Using a few lines of already preloaded code to allocate
-space for a few integers and floats, do two or three multiplications and divisions
-and retain a single non-destroyed variable to save to the database is not high overhead.
-This is much faster than calling out to identify, more compatible across server
-environments and easy. Furthermore thanks to the elegant and little used paperclip
-api options, the autosizer only runs after a post_processing event has succeeded 
-and the sizes are written to the database during the normal rails model save method.
+Only runs after a post_processing event has succeeded and the sizes are written to
+the database during the normal rails model save method.
+
 Columns are auto-detected allowing for optional autosizing of each attached_file or
-specific style of attachment completely at the programmers discretion.
-
-This is my first public software so please feel free to criticize.  I know the syntax
-is pretty fast and I will make it human friendly when I get the chance.
+specific style of attachment.
 
 Author:: Andrew Eisberg
 Copyright:: Copyright (c) 2009 Andrew Eisberg
@@ -32,19 +14,10 @@ License:: MIT License (http://www.opensource.org/licenses/mit-license.php)
 
 ==Limitations
 
-Currently only the '>' geometry flag is written as that's what I use 99% of the time
-when I also want a size.  It would be quite easy to write in additional methods to
-support other IM geometries.  These things are really just a few lines and not the
-rocket science part of IM.
+Currently only the ImageMagick '>' geometry flag is supported.  One could write additional methods to
+support other IM geometries.
 
 ==Usage
-
-To use Autosizer, simply copy the paperclip_autosizer.rb file to the models folder
-and the paperclip_processors folder to the lib folder.  Make the model you wish to
-autosize a subclass of the PaperclipAutosizer class. Tell paperclip to use the
-autosize processor (a 100% compatible subclass of the default thumbnail processor)
-and add the line +after_post_process :autosize_attached_files+ after the 
-has_attached_file declarations:
 
   class User < PaperclipAutosizer
     has_attached_file :avatar, :styles => { :thumb => "100x100>" },
@@ -54,30 +27,18 @@ has_attached_file declarations:
     after_post_process :autosize_attached_files
   end
 
-This is sufficient to handle multiple attached_files.  If only one attachment of
-many is being autosized, the stricter callback +after_<attachment>_post_process+
-can be used instead for greater efficiency.
-
-In the migration for the model, simply add columns for each attached_file/style
-combination you wish to retain sizes for. PaperclipAutosizer will see them and
-ignore any saved attachments it doesn't see columns for.  Columns must conform
-to the format +t.string :(attachment)_(style)_size+ to be recognized by the model.
+In the migration for the model:
 
   t.string   :avatar_thumb_size
   t.string   :center_large_size
 
-The sizes can then be easily called in the view.
+View code:
 
   image_tag(@user.avatar.url(:thumb), :size => @user.avatar_thumb_size)
   image_tag(@user.center.url(:large), :size => @user.center_large_size)
 
 
-==TextMate
-
-Here is a textmate snippet you can use if you want.  If you're not used to hacking
-stuff into your TM, here's how to do it.  Make a new bundle with your name. Then a new
-snippet and paste this in.  Give it a tab trigger of 'autosizer' or what you want and
-a scope selector of 'source.ruby.rails'.  Then just type autosizer and tab in a model.
+==TextMate snippit
 
 	# Paperclip Method for ${1/[[:alpha:]]+|(_)/(?1::\u$0)/g} Attachment with Autosizing
 	has_attached_file :${1:attachment_name}, :styles => { :${2:large} => "${3:750}x${4:750}>",
